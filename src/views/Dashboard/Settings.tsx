@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Database, 
   HelpCircle, 
@@ -7,19 +7,45 @@ import {
   Cpu
 } from 'lucide-react';
 import { GlassCard } from '../../components/GlassCard';
+import { apiClient } from '../../utils/apiClient';
 
 export const Settings: React.FC = () => {
   const [hnswM, setHnswM] = useState(16);
   const [hnswEfConst, setHnswEfConst] = useState(64);
   const [hnswEfSearch, setHnswEfSearch] = useState(40);
   
-  const [dbHost, setDbHost] = useState('postgresql://localhost:5432/rag_bench');
+  const [dbHost, setDbHost] = useState('postgresql://localhost:5432/ragdb');
   const [isSaved, setIsSaved] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const config = await apiClient.getConfig();
+        if (config) {
+          setHnswM(config.hnsw_m || 16);
+          setHnswEfConst(config.hnsw_ef_construction || 64);
+          setHnswEfSearch(config.hnsw_ef_search || 40);
+        }
+      } catch (err) {
+        console.error("Failed to load configs:", err);
+      }
+    };
+    fetchConfig();
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
+    try {
+      await apiClient.updateConfig({
+        hnsw_m: hnswM,
+        hnsw_ef_construction: hnswEfConst,
+        hnsw_ef_search: hnswEfSearch
+      });
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2000);
+    } catch (err: any) {
+      alert(`Failed to save parameters: ${err.error || err}`);
+    }
   };
 
   return (

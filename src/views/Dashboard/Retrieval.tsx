@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   SlidersHorizontal,
@@ -10,12 +10,96 @@ import {
 } from 'lucide-react';
 import { VectorVisualizer } from '../../components/VectorVisualizer';
 import { MOCK_QUERIES, type QueryComparison } from '../../utils/mockData';
+import { apiClient } from '../../utils/apiClient';
 
 export const Retrieval: React.FC = () => {
-  const [queries] = useState<QueryComparison[]>(MOCK_QUERIES);
-  const [selectedQuery, setSelectedQuery] = useState<QueryComparison>(MOCK_QUERIES[0]);
+  const [queries, setQueries] = useState<any[]>([]);
+  const [selectedQueryText, setSelectedQueryText] = useState<string>('');
+  const [comparison, setComparison] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'dense' | 'sparse' | 'hybrid'>('hybrid');
   const [expandedChunks, setExpandedChunks] = useState<Record<string, boolean>>({});
+  const [pcaPoints, setPcaPoints] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [sparseFallbackApplied, setSparseFallbackApplied] = useState(false);
+  const [sparseFallbackCount, setSparseFallbackCount] = useState(0);
+
+  const handleRunSearch = async (queryText: string) => {
+    if (!queryText) return;
+    setIsLoading(true);
+    try {
+      const results = await apiClient.retrieve(queryText);
+      setComparison(results);
+      setSparseFallbackApplied(results.sparse_fallback_applied || false);
+      setSparseFallbackCount(results.sparse_fallback_count || 0);
+      
+      const points = await apiClient.projectCoordinates({
+        query: queryText,
+        strategy: activeTab,
+        dense: results.dense,
+        sparse: results.sparse,
+        hybrid: results.hybrid
+      });
+      setPcaPoints(points);
+    } catch (err: any) {
+      console.error("Retrieval failed, falling back:", err);
+      const matchedMock = MOCK_QUERIES.find(q => q.query === queryText) || MOCK_QUERIES[0];
+      setComparison({
+        query: queryText,
+        dense: matchedMock.dense,
+        sparse: matchedMock.sparse,
+        hybrid: matchedMock.hybrid
+      });
+      setSparseFallbackApplied(false);
+      setSparseFallbackCount(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const loadQueries = async () => {
+      try {
+        const list = await apiClient.getGoldenQueries();
+        if (list && list.length > 0) {
+          setQueries(list);
+          setSelectedQueryText(list[0].query_text);
+          handleRunSearch(list[0].query_text);
+        } else {
+          const fallbackList = MOCK_QUERIES.map((q, idx) => ({ query_id: `mock-${idx}`, query_text: q.query }));
+          setQueries(fallbackList);
+          setSelectedQueryText(fallbackList[0].query_text);
+          handleRunSearch(fallbackList[0].query_text);
+        }
+      } catch (err) {
+        console.error("Failed to load golden queries:", err);
+        const fallbackList = MOCK_QUERIES.map((q, idx) => ({ query_id: `mock-${idx}`, query_text: q.query }));
+        setQueries(fallbackList);
+        setSelectedQueryText(fallbackList[0].query_text);
+        handleRunSearch(fallbackList[0].query_text);
+      }
+    };
+    loadQueries();
+  }, []);
+
+  // Update PCA projections when changing strategies
+  useEffect(() => {
+    if (!comparison) return;
+    const fetchPCA = async () => {
+      try {
+        const points = await apiClient.projectCoordinates({
+          query: comparison.query,
+          strategy: activeTab,
+          dense: comparison.dense,
+          sparse: comparison.sparse,
+          hybrid: comparison.hybrid
+        });
+        setPcaPoints(points);
+      } catch (err) {
+        console.error("PCA projection failed:", err);
+      }
+    };
+    fetchPCA();
+  }, [activeTab, comparison]);
 
   const toggleExpandChunk = (chunkId: string) => {
     setExpandedChunks(prev => ({
@@ -46,7 +130,7 @@ export const Retrieval: React.FC = () => {
     );
   };
 
-  const activeChunks = selectedQuery[activeTab];
+  const activeChunks = comparison ? comparison[activeTab] : [];
 
   return (
     <div className="space-y-8 animate-fade-in pr-2">
@@ -66,16 +150,16 @@ export const Retrieval: React.FC = () => {
 
         <div className="relative">
           <select
-            value={selectedQuery.query}
+            value={selectedQueryText}
             onChange={(e) => {
-              const matched = queries.find(q => q.query === e.target.value);
-              if (matched) setSelectedQuery(matched);
+              setSelectedQueryText(e.target.value);
+              handleRunSearch(e.target.value);
             }}
             className="w-full bg-[#050508] border border-white/10 focus:border-cyan-500/50 rounded-xl px-4 py-3.5 text-xs text-slate-200 focus:outline-none cursor-pointer appearance-none shadow-[inset_0_0_10px_rgba(0,0,0,0.8)] font-sans"
           >
             {queries.map((q, idx) => (
-              <option key={idx} value={q.query}>
-                {q.query}
+              <option key={idx} value={q.query_text}>
+                {q.query_text}
               </option>
             ))}
           </select>
@@ -90,7 +174,7 @@ export const Retrieval: React.FC = () => {
         
         {/* Left Side: Vector Space Projections */}
         <div className="lg:col-span-2 space-y-6">
-          <VectorVisualizer activeStrategy={activeTab} />
+          <VectorVisualizer activeStrategy={activeTab} points={pcaPoints} />
 
           <div className="glass-panel p-6 rounded-xl space-y-4 text-left">
             <h4 className="font-bold text-xs text-white flex items-center gap-1.5 font-mono">
@@ -156,6 +240,13 @@ export const Retrieval: React.FC = () => {
 
           {/* Retrieved document chunks stack */}
           <div className="space-y-4 text-left">
+            {activeTab === 'sparse' && sparseFallbackApplied && (
+              <div className="p-3.5 rounded-lg border border-amber-500/20 bg-amber-500/5 text-[10px] text-amber-400 font-mono leading-normal flex items-start gap-2 animate-fade-in">
+                <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-[8px] font-bold shrink-0">FALLBACK BADGE</span>
+                <span>Sparse search yielded empty keyword matches. Loaded {sparseFallbackCount} semantic fallback hits.</span>
+              </div>
+            )}
+
             {activeChunks.map((chunk, index) => {
               const isExpanded = expandedChunks[chunk.id] || false;
               

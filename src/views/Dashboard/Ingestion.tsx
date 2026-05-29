@@ -8,6 +8,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { GlassCard } from '../../components/GlassCard';
+import { apiClient } from '../../utils/apiClient';
 
 export const Ingestion: React.FC = () => {
   // Config states
@@ -47,33 +48,45 @@ export const Ingestion: React.FC = () => {
     if (processingState !== 'idle') return;
 
     const file = e.dataTransfer.files[0];
-    if (file) startFakeUpload(file);
+    if (file) startRealIngestion(file);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) startFakeUpload(file);
+    if (file) startRealIngestion(file);
   };
 
-  const startFakeUpload = (file: File) => {
+  const startRealIngestion = async (file: File) => {
     setUploadedFile({ name: file.name, size: file.size });
     setUploadProgress(0);
     setProcessingState('uploading');
 
-    let currentProgress = 0;
-    const interval = setInterval(() => {
-      currentProgress += 10;
-      setUploadProgress(currentProgress);
-      if (currentProgress >= 100) {
-        clearInterval(interval);
-        setProcessingState('processing');
-
-        // Transition to text processing state
-        setTimeout(() => {
-          setProcessingState('completed');
-        }, 3000);
-      }
-    }, 250);
+    try {
+      await apiClient.triggerIngest();
+      setProcessingState('processing');
+      
+      const interval = setInterval(async () => {
+        try {
+          const status = await apiClient.getIngestStatus();
+          if (status.status === 'completed') {
+            clearInterval(interval);
+            setUploadProgress(100);
+            setProcessingState('completed');
+          } else if (status.status === 'failed') {
+            clearInterval(interval);
+            setProcessingState('idle');
+            alert(`Ingestion failed: ${status.last_error || 'Check server logs.'}`);
+          } else {
+            setUploadProgress(status.progress);
+          }
+        } catch (e) {
+          // resilient silent polling retry
+        }
+      }, 1500);
+    } catch (err: any) {
+      setProcessingState('idle');
+      alert(`Failed to start ingestion: ${err.error || 'Server error'}`);
+    }
   };
 
   return (

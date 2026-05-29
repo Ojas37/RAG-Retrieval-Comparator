@@ -25,3 +25,28 @@ dist-ssr
 
 .vercel
 .env*.local
+
+# Environment variables
+.env
+.env.production
+.env.development
+
+# Python virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Python compiled caching
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# Testing and local cache
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.gemini/

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Terminal } from '../../components/Terminal';
 import { type BenchmarkRun, MOCK_RUNS } from '../../utils/mockData';
+import { apiClient } from '../../utils/apiClient';
 import confetti from 'canvas-confetti';
 
 interface BenchmarkRunsProps {
@@ -16,6 +17,8 @@ interface BenchmarkRunsProps {
   setIsRunning: (running: boolean) => void;
   runProgress: number;
   setRunProgress: React.Dispatch<React.SetStateAction<number>>;
+  historyRuns: BenchmarkRun[];
+  fetchHistory: () => Promise<void>;
 }
 
 export const BenchmarkRuns: React.FC<BenchmarkRunsProps> = ({
@@ -25,33 +28,66 @@ export const BenchmarkRuns: React.FC<BenchmarkRunsProps> = ({
   setIsRunning,
   runProgress,
   setRunProgress,
+  historyRuns,
+  fetchHistory,
 }) => {
-  const [runs] = useState<BenchmarkRun[]>(MOCK_RUNS);
+  const [runs, setRuns] = useState<BenchmarkRun[]>(historyRuns);
 
-  const startEvaluationRun = () => {
+  // Sync state if historyRuns changes
+  React.useEffect(() => {
+    setRuns(historyRuns);
+  }, [historyRuns]);
+
+  const startEvaluationRun = async () => {
     if (isRunning) return;
     setIsRunning(true);
     setRunProgress(0);
 
-    const interval = setInterval(() => {
-      setRunProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsRunning(false);
-          
-          // Trigger confetti on successful compilation
-          confetti({
-            particleCount: 100,
-            spread: 70,
-            origin: { y: 0.6 },
-            colors: ['#06b6d4', '#8b5cf6', '#3b82f6'],
-          });
-          
-          return 100;
+    try {
+      const runName = `FiQA Evaluation Run #${historyRuns.length + 1}`;
+      const resp = await apiClient.runBenchmark(runName);
+      const newRunId = resp.run_id;
+      
+      let progressVal = 0;
+      const interval = setInterval(async () => {
+        try {
+          const statusResp = await apiClient.getBenchmarkRunStatus(newRunId);
+          if (statusResp.status === 'completed') {
+            clearInterval(interval);
+            setRunProgress(100);
+            setIsRunning(false);
+            
+            // Refresh app global history
+            await fetchHistory();
+            
+            // Confetti
+            confetti({
+              particleCount: 100,
+              spread: 70,
+              origin: { y: 0.6 },
+              colors: ['#06b6d4', '#8b5cf6', '#3b82f6'],
+            });
+          } else if (statusResp.status === 'failed') {
+            clearInterval(interval);
+            setRunProgress(0);
+            setIsRunning(false);
+            alert("Benchmark evaluation failed!");
+          } else {
+            // Visual progress step
+            progressVal = Math.min(progressVal + 2, 98);
+            setRunProgress(progressVal);
+          }
+        } catch (e) {
+          // resilient fallback increments
+          progressVal = Math.min(progressVal + 1, 95);
+          setRunProgress(progressVal);
         }
-        return prev + 5; // Simulating fast progress
-      });
-    }, 800);
+      }, 3000);
+    } catch (err: any) {
+      setIsRunning(false);
+      setRunProgress(0);
+      alert(`Failed to start benchmark: ${err.error || 'Check that your corpus has been ingested.'}`);
+    }
   };
 
   const stopEvaluationRun = () => {

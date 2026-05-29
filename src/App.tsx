@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar, type ViewType } from './components/Sidebar';
 import { AIAssistant } from './components/AIAssistant';
 import { LandingPage } from './views/LandingPage/LandingPage';
@@ -9,6 +9,7 @@ import { BenchmarkRuns } from './views/Dashboard/BenchmarkRuns';
 import { Metrics } from './views/Dashboard/Metrics';
 import { Settings } from './views/Dashboard/Settings';
 import { type BenchmarkRun, MOCK_RUNS } from './utils/mockData';
+import { apiClient } from './utils/apiClient';
 import { 
   Sparkles, 
   Database, 
@@ -20,11 +21,36 @@ function App() {
   const [currentView, setCurrentView] = useState<ViewType>('landing');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  const [historyRuns, setHistoryRuns] = useState<BenchmarkRun[]>([]);
   const [activeRun, setActiveRun] = useState<BenchmarkRun>(MOCK_RUNS[0]);
 
   // Global running simulator states
   const [isRunning, setIsRunning] = useState(false);
   const [runProgress, setRunProgress] = useState(0);
+
+  const fetchHistory = async () => {
+    try {
+      const history = await apiClient.getBenchmarkHistory();
+      if (history && history.length > 0) {
+        setHistoryRuns(history);
+        const stillExists = history.find(r => r.id === activeRun?.id);
+        if (!stillExists) {
+          setActiveRun(history[0]);
+        } else {
+          setActiveRun(stillExists);
+        }
+      } else {
+        setHistoryRuns(MOCK_RUNS);
+      }
+    } catch (err) {
+      console.error("Failed to load history runs from backend:", err);
+      setHistoryRuns(MOCK_RUNS);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
 
   const handleSelectRun = (run: BenchmarkRun) => {
     setActiveRun(run);
@@ -52,6 +78,8 @@ function App() {
             setIsRunning={setIsRunning}
             runProgress={runProgress}
             setRunProgress={setRunProgress}
+            historyRuns={historyRuns}
+            fetchHistory={fetchHistory}
           />
         );
       case 'metrics':

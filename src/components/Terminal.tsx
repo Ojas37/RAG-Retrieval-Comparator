@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal as TermIcon, XCircle, Trash2 } from 'lucide-react';
 import { MOCK_TERMINAL_LOGS } from '../utils/mockData';
+import { streamLogs } from '../utils/apiClient';
 
 interface TerminalProps {
   isRunning: boolean;
@@ -15,39 +16,43 @@ export const Terminal: React.FC<TerminalProps> = ({
 }) => {
   const [logs, setLogs] = useState<string[]>([]);
   const terminalEndRef = useRef<HTMLDivElement>(null);
-  const logIndexRef = useRef(0);
 
   // Scroll to bottom whenever logs update
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
-  // Handle active running log simulator
+  // Handle active running log stream over WebSocket
   useEffect(() => {
     if (!isRunning) {
       if (logs.length === 0) {
         setLogs([
           '🟢 [SYSTEM] pgvector Comparator Console. Idle.',
-          '💡 [SYSTEM] Click "Trigger Evaluation Run" above to simulate real-time HNSW / IVFFlat benchmarking.'
+          '💡 [SYSTEM] Click "Trigger Evaluation Run" above to initiate real-time pgvector benchmarking.'
         ]);
       }
       return;
     }
 
-    setLogs(['⚡ [SYSTEM] Preparing ingestion pipelines & pgvector sandbox environment...']);
-    logIndexRef.current = 0;
-
-    const interval = setInterval(() => {
-      if (logIndexRef.current < MOCK_TERMINAL_LOGS.length) {
-        const nextLog = MOCK_TERMINAL_LOGS[logIndexRef.current];
-        setLogs(prev => [...prev, nextLog]);
-        logIndexRef.current += 1;
-      } else {
-        clearInterval(interval);
+    setLogs(['⚡ [SYSTEM] Establishing WebSocket log stream with pgvector engine...']);
+    
+    // Connect to WebSocket logs stream
+    const stream = streamLogs(
+      (newLog) => {
+        setLogs(prev => [...prev, newLog]);
+      },
+      () => {
+        setLogs(prev => [...prev, '⚠️ [SYSTEM] WebSocket connection closed, attempting reconnect...']);
+      },
+      (err) => {
+        setLogs(prev => [...prev, '🔴 [ERROR] WebSocket logs channel experienced a connection error.']);
       }
-    }, 450); // Speed of logs streaming
+    );
 
-    return () => clearInterval(interval);
+    return () => {
+      // Clean up connection on dismount or when isRunning is set to false
+      stream.close();
+    };
   }, [isRunning]);
 
   const handleClear = () => {

@@ -4,9 +4,10 @@ import { MOCK_VECTOR_POINTS } from '../utils/mockData';
 
 interface VectorVisualizerProps {
   activeStrategy: 'dense' | 'sparse' | 'hybrid';
+  points?: any[];
 }
 
-export const VectorVisualizer: React.FC<VectorVisualizerProps> = ({ activeStrategy }) => {
+export const VectorVisualizer: React.FC<VectorVisualizerProps> = ({ activeStrategy, points = MOCK_VECTOR_POINTS }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
@@ -62,8 +63,9 @@ export const VectorVisualizer: React.FC<VectorVisualizerProps> = ({ activeStrate
       const activePulse = Math.sin(pulseAngle) * 3 + 6;
 
       // Draw Query Vector (focus point)
-      const qX = 220;
-      const qY = 180;
+      const queryPt = points.find(p => p.strategy === 'query') || { x: 50, y: 50 };
+      const qX = (queryPt.x / 100) * canvas.width;
+      const qY = (queryPt.y / 100) * canvas.height;
 
       // Pulse glow query
       ctx.shadowBlur = activePulse * 2;
@@ -80,7 +82,7 @@ export const VectorVisualizer: React.FC<VectorVisualizerProps> = ({ activeStrate
       ctx.fillText('ACTIVE QUERY EMBEDDING', qX - 55, qY - 15);
 
       // Render vector chunk points
-      MOCK_VECTOR_POINTS.forEach(pt => {
+      points.filter(pt => pt.strategy !== 'query').forEach(pt => {
         // Map 0-100 coordinates to canvas size
         const ptX = (pt.x / 100) * canvas.width;
         const ptY = (pt.y / 100) * canvas.height;
@@ -153,7 +155,7 @@ export const VectorVisualizer: React.FC<VectorVisualizerProps> = ({ activeStrate
     let foundPoint = null;
 
     // Check hit test
-    MOCK_VECTOR_POINTS.forEach(pt => {
+    points.filter(pt => pt.strategy !== 'query').forEach(pt => {
       const ptX = (pt.x / 100) * canvas.width;
       const ptY = (pt.y / 100) * canvas.height;
       const dist = Math.hypot(ptX - mouseX, ptY - mouseY);
