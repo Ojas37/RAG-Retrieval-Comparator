@@ -14,7 +14,7 @@ export const Ingestion: React.FC = () => {
   const [chunkStrategy, setChunkStrategy] = useState('recursive');
   const [chunkSize, setChunkSize] = useState(500);
   const [overlapSize, setOverlapSize] = useState(10); // in %
-  const [embeddingModel, setEmbeddingModel] = useState('openai-small');
+  const [embeddingModel, setEmbeddingModel] = useState('bge-small');
   const [indexType, setIndexType] = useState('hnsw');
 
   // Interactive Upload states
@@ -28,11 +28,12 @@ export const Ingestion: React.FC = () => {
   useEffect(() => {
     // Dynamically calculate estimated tokens and cost based on slider configurations
     const rawTokens = 12500 * (1000 / chunkSize) * (1 + overlapSize / 100);
-    let modelPrice = 0.00002; // OpenAI text-embedding-3-small price per 1k tokens
+    let modelPrice = 0.0; // Local BAAI/bge-small-en-v1.5 is 100% free!
 
-    if (embeddingModel === 'openai-large') modelPrice = 0.00013;
+    if (embeddingModel === 'openai-small') modelPrice = 0.00002;
+    else if (embeddingModel === 'openai-large') modelPrice = 0.00013;
     else if (embeddingModel === 'cohere-v3') modelPrice = 0.0001;
-    else if (embeddingModel === 'bge-large') modelPrice = 0.0; // self-hosted local model
+    else if (embeddingModel === 'bge-large') modelPrice = 0.0;
 
     const costValue = (rawTokens / 1000) * modelPrice;
     setEstimates({
@@ -268,10 +269,11 @@ export const Ingestion: React.FC = () => {
                 onChange={(e) => setEmbeddingModel(e.target.value)}
                 className="w-full bg-[#050508] border border-white/10 rounded-lg p-2.5 text-xs text-slate-200 outline-none"
               >
+                <option value="bge-small">BAAI/bge-small-en-v1.5 (384d) [Local & Free]</option>
+                <option value="bge-large">BAAI/bge-large-en-v1.5 (1024d) [Local & Free]</option>
                 <option value="openai-small">openai/text-embedding-3-small (1536d)</option>
                 <option value="openai-large">openai/text-embedding-3-large (3072d)</option>
                 <option value="cohere-v3">cohere/embed-english-v3.0 (1024d)</option>
-                <option value="bge-large">BAAI/bge-large-en-v1.5 (1024d) [Local]</option>
               </select>
             </div>
 

@@ -181,7 +181,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterDashboard }) =>
               <circle r="26" fill="#16171d" stroke="#8b5cf6" strokeWidth="2" filter="url(#shadow-purple)" />
               <BrainIcon className="w-5 h-5 text-purple-400 -translate-x-2.5 -translate-y-2.5" />
               <text y="58" fill="#e2e8f0" fontSize="10" fontWeight="bold" fontFamily="monospace" textAnchor="middle">3. EMBEDDING</text>
-              <text y="70" fill="#64748b" fontSize="8" fontFamily="sans-serif" textAnchor="middle">OpenAI 1536d</text>
+              <text y="70" fill="#64748b" fontSize="8" fontFamily="sans-serif" textAnchor="middle">BGE-Small 384d</text>
             </g>
 
             {/* pgvector Node (Step 4) */}
@@ -323,7 +323,7 @@ ORDER BY rrf_score DESC;`}
         <div className="flex flex-wrap items-center justify-center gap-10 opacity-60 hover:opacity-90 transition-opacity">
           <span className="font-bold text-sm font-mono text-slate-400">POSTGRESQL</span>
           <span className="font-bold text-sm font-mono text-cyan-400">PGVECTOR</span>
-          <span className="font-bold text-sm font-mono text-slate-400">OPENAI EMBEDDINGS</span>
+          <span className="font-bold text-sm font-mono text-slate-400">BGE EMBEDDINGS (BAAI)</span>
           <span className="font-bold text-sm font-mono text-purple-400">COHERE EM-v3</span>
           <span className="font-bold text-sm font-mono text-slate-400">LANGCHAIN</span>
           <span className="font-bold text-sm font-mono text-blue-400">FASTAPI</span>

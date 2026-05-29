@@ -100,7 +100,7 @@ export const Retrieval: React.FC = () => {
             <div className="space-y-3 font-mono text-[10px] text-slate-400">
               <div className="flex justify-between border-b border-white/5 pb-1">
                 <span>Dense Embeddings:</span>
-                <span className="text-cyan-400 font-bold">1536 Dimensions</span>
+                <span className="text-cyan-400 font-bold">384 Dimensions (BGE)</span>
               </div>
               <div className="flex justify-between border-b border-white/5 pb-1">
                 <span>Sparse tokens GIN:</span>

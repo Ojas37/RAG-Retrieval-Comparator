@@ -14,7 +14,6 @@ export const Settings: React.FC = () => {
   const [hnswEfSearch, setHnswEfSearch] = useState(40);
   
   const [dbHost, setDbHost] = useState('postgresql://localhost:5432/rag_bench');
-  const [apiKey, setApiKey] = useState('sk-proj-....................');
   const [isSaved, setIsSaved] = useState(false);
 
   const handleSave = (e: React.FormEvent) => {
@@ -144,13 +143,14 @@ export const Settings: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-slate-400 font-semibold block uppercase font-mono text-[9px]">OpenAI API Key credential</label>
+              <label className="text-slate-400 font-semibold block uppercase font-mono text-[9px]">Local Model Inference Host</label>
               <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="w-full bg-[#050508] border border-white/10 rounded-lg p-2.5 text-xs text-slate-200 outline-none font-mono"
+                type="text"
+                value="http://localhost:8000 (Local BGE-Small v1.5)"
+                disabled
+                className="w-full bg-[#050508]/40 border border-white/5 rounded-lg p-2.5 text-xs text-slate-400 outline-none font-mono cursor-not-allowed"
               />
+              <span className="text-[9px] text-emerald-400 font-mono block mt-1">✓ Local BAAI/bge-small-en-v1.5 executes completely free without API keys!</span>
             </div>
           </div>
         </GlassCard>

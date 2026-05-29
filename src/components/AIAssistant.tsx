@@ -91,11 +91,11 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ isOpen, onClose }) => 
           description: 'HNSW dimensions scale aggressively. A memory pool exceeding 256MB is advised for index scaling.'
         }];
       } else if (lowerVal.includes('cost') || lowerVal.includes('embedding') || lowerVal.includes('price')) {
-        replyText = "Your active run generated 24,105 chunks. Using `openai/text-embedding-3-small` (priced at $0.00002 / 1k tokens), embedding operations required approximately 11,208,450 tokens. This results in a highly cost-efficient embedding expenditure of **$0.224 USD**.";
+        replyText = "Your active run generated 24,105 chunks. Using the local model `BAAI/bge-small-en-v1.5`, all embedding operations are executed completely locally inside your sandbox CPU. This results in a total embedding API cost of **$0.00 USD (100% Free & Open-Source)**!";
         insights = [{
           type: 'cost',
-          title: 'Vastly Budget Friendly',
-          description: 'Using small embedding models results in extremely low startup operating expenditures.'
+          title: 'Zero API Charges',
+          description: 'Local BAAI/bge-small-en-v1.5 execution delivers high recall with zero operating bills.'
         }];
       } else if (lowerVal.includes('optimize') || lowerVal.includes('improve')) {
         replyText = "To optimize your hybrid setup, I recommend three steps:\n\n1. **Trim Chunk Overlaps**: Shrinking chunk overlap from 20% to 10% reduces index dimensions by 15% and eliminates semantic duplicates.\n\n2. **RRF Param Tuning**: Setting k=60 inside Reciprocal Rank Fusion balances dense similarity weights and lexical sparse occurrences perfectly. \n\n3. **PostgreSQL Cache Warmup**: Execute `SELECT * FROM idx_rag_vectors_hnsw` on startup to preload the HNSW index graphs into memory buffers for low-latency warm queries.";

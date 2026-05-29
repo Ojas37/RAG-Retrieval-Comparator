@@ -69,7 +69,7 @@ export const BenchmarkRuns: React.FC<BenchmarkRunsProps> = ({
           </span>
           <h2 className="text-xl font-bold text-white">Execute a New RAG Benchmarking Run</h2>
           <p className="text-slate-400 text-xs leading-relaxed font-light">
-            Triggering a new evaluation compiles document chunks, requests embeddings from OpenAI, loads them into postgres, constructs the pgvector HNSW index, and evaluates MRR recall bounds against 500 gold queries.
+            Triggering a new evaluation compiles document chunks, compiles BAAI/bge-small embeddings locally, loads them into postgres, constructs the pgvector HNSW index, and evaluates MRR recall bounds against 500 gold queries.
           </p>
         </div>
 
