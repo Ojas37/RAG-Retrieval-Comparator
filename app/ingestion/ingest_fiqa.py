@@ -57,25 +57,25 @@ async def run_ingestion_pipeline(session, log_callback=None):
         # Local BGE embedding
         embeddings = embed_texts(texts)
         
-        # Batch insert with ON CONFLICT DO NOTHING
-        async with session.begin_nested():
-            for doc, emb in zip(batch, embeddings):
-                doc_id = str(doc["_id"])
-                content = doc["text"]
-                token_count = len(content.split())
-                
-                stmt = insert(Corpus).values(
-                    doc_id=doc_id,
-                    content=content,
-                    embedding=emb,
-                    token_count=token_count
-                ).on_conflict_do_nothing(index_elements=["doc_id"])
-                
+        # High-performance bulk insert with ON CONFLICT DO NOTHING
+        values_list = []
+        for doc, emb in zip(batch, embeddings):
+            doc_id = str(doc["_id"])
+            content = doc["text"]
+            token_count = len(content.split())
+            values_list.append({
+                "doc_id": doc_id,
+                "content": content,
+                "embedding": emb,
+                "token_count": token_count
+            })
+        
+        if values_list:
+            async with session.begin_nested():
+                stmt = insert(Corpus).values(values_list).on_conflict_do_nothing(index_elements=["doc_id"])
                 res = await session.execute(stmt)
-                if res.rowcount > 0:
-                    inserted_count += 1
-            
-            await session.commit()
+                inserted_count += res.rowcount
+                await session.commit()
             
         if (i // BATCH_SIZE) % 10 == 0 or i + BATCH_SIZE >= len(docs):
             log_msg(f"Processed chunks: {min(i + BATCH_SIZE, len(docs))}/{len(docs)} [Idempotent unique inserts: {inserted_count}]")
