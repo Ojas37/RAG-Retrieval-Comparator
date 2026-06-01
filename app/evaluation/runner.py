@@ -1,6 +1,7 @@
 import time
 import uuid
 import logging
+from typing import Optional
 from datetime import datetime
 from sqlalchemy import select, update, func
 from app.models import Query, BenchmarkRun, RetrievalResult

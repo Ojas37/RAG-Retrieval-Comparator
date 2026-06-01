@@ -95,6 +95,16 @@ async def startup_event():
     # Pre-warm embedder model to avoid lag on first request
     asyncio.create_task(asyncio.to_thread(get_embedder_model))
 
+    # 4. Automatically launch the default web browser to open the React frontend
+    def open_browser():
+        import time
+        import webbrowser
+        time.sleep(1.5)  # Wait briefly for startup logs to output
+        webbrowser.open("http://localhost:5173/")
+
+    import threading
+    threading.Thread(target=open_browser, daemon=True).start()
+
 # 1. Health check
 @app.get("/api/health", tags=["System"])
 async def health_check(db: AsyncSession = Depends(get_db)):
